@@ -61,15 +61,12 @@ LiveSort 现在在浏览器端完成音频分析，不依赖 Python 后端。基
 - `static/lame.min.js`：浏览器端 MP3 编码器
 - `static/*.svg`：品牌图标与说明页配图
 
+## 在线使用
+- 推荐直接使用线上版本：`https://lun3cy.github.io/LiveSort/`
+
 ## 本地运行
 1. 使用任意静态文件服务器在 `LiveSortApp` 目录启动站点（例如 VS Code Live Server）。
 2. 打开首页并导入本地音频文件即可使用。
-
-## GitHub Pages 部署
-1. 将仓库默认分支设为 `main`。
-2. 在仓库 Settings → Pages 中，将 Source 设为 **GitHub Actions**。
-3. 推送到 `main` 后会自动触发 `.github/workflows/deploy-pages.yml`。
-4. 工作流会将 `templates/index.html`、`templates/algorithm.html` 与 `static/` 打包并发布为 Pages 站点。
 
 ## 技术栈
 - HTML / JavaScript / Tailwind CSS / Chart.js
