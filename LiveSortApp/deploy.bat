@@ -73,16 +73,25 @@ if errorlevel 1 (
 echo [LIVESORT_DEPLOY] Fetching remote state...
 git fetch origin main >nul 2>nul
 
-echo [LIVESORT_DEPLOY] Pushing to GitHub...
-git push -u origin main
-if errorlevel 1 (
-    echo [LIVESORT_DEPLOY] Standard push failed, trying force-with-lease...
-    git push -u origin main --force-with-lease
+git ls-remote --exit-code --heads origin main >nul 2>nul
+if not errorlevel 1 (
+    echo [LIVESORT_DEPLOY] Rebasing local commits onto origin/main...
+    git pull --rebase origin main
     if errorlevel 1 (
-        echo [LIVESORT_DEPLOY] Push failed. Check GitHub authentication and repository permissions.
+        echo [LIVESORT_DEPLOY] Rebase failed. Resolve conflicts, then run deploy again.
+        git rebase --abort >nul 2>nul
         pause
         exit /b 1
     )
+)
+
+echo [LIVESORT_DEPLOY] Pushing to GitHub...
+git push -u origin main
+if errorlevel 1 (
+    echo [LIVESORT_DEPLOY] Push failed. Remote may have new commits or branch protection is enabled.
+    echo [LIVESORT_DEPLOY] Please run: git pull --rebase origin main
+    pause
+    exit /b 1
 )
 
 echo [LIVESORT_DEPLOY] Push complete.
