@@ -14,11 +14,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if not exist ".git" (
-    if exist "LiveSortApp\.git" (
-        echo [LIVESORT_DEPLOY] Found legacy repo metadata in LiveSortApp\.git, removing it for root-level deployment.
-        rmdir /s /q "LiveSortApp\.git"
-    )
+if not exist ".git" if exist "LiveSortApp\.git" (
+    echo [LIVESORT_DEPLOY] Found LiveSortApp\.git but root .git is missing.
+    echo [LIVESORT_DEPLOY] Please migrate repository root manually, then run deploy again.
+    pause
+    exit /b 1
 )
 
 if not exist ".git" (
@@ -95,4 +95,5 @@ if errorlevel 1 (
 )
 
 echo [LIVESORT_DEPLOY] Push complete.
+echo [LIVESORT_DEPLOY] GitHub Pages URL: https://lun3cy.github.io/LiveSort/
 pause
