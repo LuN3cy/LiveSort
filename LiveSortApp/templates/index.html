@@ -6601,9 +6601,10 @@
             pendingDeleteAnchorElement = null;
             try {
                 releaseLocalSongFile(filename);
-                const data = {};
                 const localRemainingSongs = (Array.isArray(window.playlistSongs) ? window.playlistSongs : [])
                     .filter(song => song && song.filename !== filename);
+                const canKeepAnalyzedCurve = hasAnalyzedCurve && Array.isArray(latestIdealCurve) && latestIdealCurve.length > 0;
+                const preservedIdealCurve = canKeepAnalyzedCurve ? [...latestIdealCurve] : [];
                 
                 // If the deleted track is currently playing, stop it
                 if (currentTrackElement && currentTrackElement.dataset.filename === filename) {
@@ -6615,12 +6616,6 @@
                     updatePlayerSafeArea();
                 }
 
-                const hasServerSortedSongs = Array.isArray(data.sorted) && data.sorted.length > 0;
-                if (hasServerSortedSongs) {
-                    renderUI(data.sorted, data.actual_curve, data.ideal_curve, true);
-                    return;
-                }
-
                 if (localRemainingSongs.length === 0) {
                     document.getElementById('playlist-container').innerHTML = '';
                     document.getElementById('empty-state').style.display = '';
@@ -6630,11 +6625,18 @@
                         myChart.data.datasets[1].data = [];
                         myChart.update();
                     }
+                    hasAnalyzedCurve = false;
+                    latestIdealCurve = [];
                     window.playlistSongs = [];
                 } else {
                     window.playlistSongs = localRemainingSongs;
                     document.getElementById('empty-state').style.display = 'none';
                     renderUI(window.playlistSongs, [], [], false);
+                    if (canKeepAnalyzedCurve) {
+                        latestIdealCurve = preservedIdealCurve;
+                        hasAnalyzedCurve = true;
+                        updateCurveAfterManualSort();
+                    }
                 }
             } catch (err) {
                 console.error('Error deleting track:', err);
