@@ -51,6 +51,7 @@ if errorlevel 1 (
 echo [LIVESORT_DEPLOY] Staging files...
 git add LiveSortApp
 git add .github/workflows/deploy-pages.yml
+git add README.md
 if errorlevel 1 (
     echo [LIVESORT_DEPLOY] Failed to stage files.
     pause
