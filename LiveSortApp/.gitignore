@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+music_files/
+analysis_cache.json
+.vercel/

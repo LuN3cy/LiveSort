@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveSort | 算法说明</title>
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.cdnfonts.com/css/google-sans" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="./static/livesort-brand-icon.svg">
+    <style>
+        :root {
+            --bg-color: #f9f9f8;
+            --text-color: #111111;
+            --border-color: #d1d1d1;
+            --accent-color: #000000;
+            --app-bg: #f3f1eb;
+            --soft-surface: rgba(250, 248, 242, 0.92);
+            --soft-surface-strong: rgba(245, 242, 235, 0.98);
+            --soft-border: transparent;
+            --soft-shadow: none;
+            --soft-inset: none;
+            --muted-text: #777777;
+            --orange-accent: #f97316;
+            --orange-accent-soft: rgba(249, 115, 22, 0.12);
+            --font-sans: "Google Sans", "Google Sans Text", "Product Sans", "Inter", sans-serif;
+        }
+
+        @view-transition {
+            navigation: auto;
+        }
+
+        html.dark {
+            --bg-color: #111111;
+            --text-color: #f9f9f8;
+            --border-color: #333333;
+            --accent-color: #ffffff;
+            --app-bg: #121212;
+            --soft-surface: rgba(24, 24, 24, 0.94);
+            --soft-surface-strong: rgba(32, 32, 32, 0.98);
+            --soft-border: transparent;
+            --soft-shadow: none;
+            --soft-inset: none;
+            --muted-text: rgba(255, 255, 255, 0.56);
+            --orange-accent-soft: rgba(249, 115, 22, 0.18);
+        }
+
+        body {
+            background-color: var(--app-bg);
+            background-image:
+                radial-gradient(circle at top left, rgba(255, 255, 255, 0.52), transparent 32%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+            color: var(--text-color);
+            font-family: var(--font-sans);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+        }
+
+        html.dark body {
+            background-image:
+                radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 32%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        #algorithm-shell {
+            width: min(1400px, 100%);
+        }
+
+        #algorithm-main > * {
+            min-width: 0;
+        }
+
+        section {
+            scroll-margin-top: 1.25rem;
+        }
+
+        body.embedded {
+            padding: 0;
+        }
+
+        body.embedded #algorithm-shell {
+            max-width: none;
+            width: 100%;
+            padding: 1rem 1.5rem 2rem;
+        }
+
+        body.embedded #algorithm-main {
+            display: block;
+        }
+
+        body.embedded #algorithm-toc {
+            position: fixed;
+            left: 1.5rem;
+            top: 1rem;
+            width: clamp(170px, 19vw, 240px);
+            z-index: 6;
+        }
+
+        body.embedded #algorithm-article {
+            margin-left: calc(clamp(170px, 19vw, 240px) + 1.5rem);
+        }
+
+        body.embedded #algorithm-toc > div {
+            position: static;
+            max-height: calc(100vh - 2rem);
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        body.embedded #algorithm-article,
+        body.embedded #algorithm-article p,
+        body.embedded #algorithm-article li {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        body.embedded #algorithm-article canvas {
+            max-width: 100% !important;
+        }
+
+        body.embedded header,
+        body.embedded header + .hairline {
+            display: none;
+        }
+
+        .sans-text {
+            font-family: var(--font-sans);
+        }
+
+        .system-toolbar,
+        .page-panel,
+        .article-section,
+        .toc-panel,
+        .visual-shell {
+            background: var(--soft-surface);
+            border: none;
+            box-shadow: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .system-toolbar {
+            position: sticky;
+            top: 16px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            padding: 1rem 1.35rem;
+            border-radius: 2rem;
+        }
+
+        .toolbar-brand-title {
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            line-height: 0.96;
+            font-weight: 500;
+            letter-spacing: -0.05em;
+            color: var(--orange-accent);
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        #back-link,
+        #lang-toggle,
+        #theme-toggle {
+            border: none !important;
+            border-radius: 999px;
+            background: var(--soft-surface-strong);
+            color: var(--text-color);
+            padding: 0.78rem 1.15rem;
+            box-shadow: none;
+            transition: transform 180ms ease, background 220ms ease, color 220ms ease;
+            text-decoration: none;
+        }
+
+        #back-link:hover,
+        #lang-toggle:hover,
+        #theme-toggle:hover {
+            transform: translateY(-1px);
+        }
+
+        #back-link {
+            background: var(--text-color);
+            color: #fff;
+            box-shadow: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        html.dark #back-link {
+            color: #111111;
+        }
+        body.embedded #back-link {
+            width: 2.8rem;
+            height: 2.8rem;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+        }
+        body.embedded #back-link .back-link-label {
+            display: none;
+        }
+        body.embedded #back-link .close-icon {
+            display: inline-flex;
+        }
+
+        .page-panel,
+        .toc-panel {
+            border-radius: 2rem;
+            padding: 1.5rem;
+        }
+
+        .page-panel {
+            min-height: calc(100vh - 220px);
+        }
+
+        .toc-panel {
+            position: sticky;
+            top: 1rem;
+        }
+        .toc-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .toc-list li {
+            margin: 0;
+        }
+
+        .eyebrow {
+            font-size: 0.7rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted-text);
+        }
+
+        .article-title {
+            font-size: clamp(2.4rem, 5vw, 4rem);
+            line-height: 0.96;
+            font-weight: 500;
+            letter-spacing: -0.08em;
+        }
+
+        .article-intro {
+            margin-top: 0.8rem;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+            color: var(--muted-text);
+            letter-spacing: -0.01em;
+        }
+
+        .article-section {
+            border-radius: 1.75rem;
+            padding: 1.4rem 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .article-section h2 {
+            font-size: 1.5rem;
+            line-height: 1.1;
+            font-weight: 500;
+            letter-spacing: -0.04em;
+            margin-bottom: 1rem;
+        }
+
+        .toc-list a {
+            display: flex;
+            align-items: center;
+            padding: 0.78rem 0.9rem;
+            border-radius: 1rem;
+            background: var(--soft-surface-strong);
+            color: var(--text-color);
+            transition: transform 180ms ease, background 180ms ease;
+        }
+
+        .toc-list a:hover {
+            transform: translateX(2px);
+            background: var(--orange-accent-soft);
+            text-decoration: none;
+        }
+        .close-icon {
+            display: none;
+            width: 1rem;
+            height: 1rem;
+            align-self: center;
+            flex-shrink: 0;
+        }
+
+        /* Lang toggle visibility */
+        .lang-zh { display: none; }
+        body.zh-mode .lang-en { display: none; }
+        body.zh-mode .lang-zh { display: inline; }
+        body.zh-mode .lang-zh-block { display: block; }
+        body.zh-mode .lang-en-block { display: none; }
+        
+        .lang-en-block { display: block; }
+        .lang-zh-block { display: none; }
+
+        /* Theme toggle visibility */
+        html.dark .dark-text { display: none; }
+        html.dark .light-text { display: inline; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(150, 150, 150, 0.3);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(150, 150, 150, 0.5);
+        }
+
+        h1, h2, h3 { font-weight: 400; }
+        .hairline {
+            display: none;
+        }
+        
+        p {
+            margin-bottom: 1.5rem;
+            line-height: 1.72;
+            font-size: 0.98rem;
+            color: rgba(17, 24, 39, 0.78);
+        }
+
+        html.dark p {
+            color: rgba(241, 245, 249, 0.8);
+        }
+
+        .visual-shell {
+            width: 100%;
+            margin-top: 1.25rem;
+            padding: 1rem;
+            border-radius: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .system-toolbar {
+                padding: 1rem;
+                border-radius: 1.6rem;
+            }
+
+            .toolbar-actions {
+                width: 100%;
+            }
+
+            .toolbar-actions > * {
+                flex: 1 1 calc(33.333% - 0.5rem);
+                text-align: center;
+                justify-content: center;
+            }
+
+            .page-panel,
+            .toc-panel,
+            .article-section {
+                padding: 1.15rem;
+            }
+        }
+    </style>
+</head>
+<body class="zh-mode p-4 md:p-12" data-embedded="0">
+    <div id="algorithm-shell" class="mx-auto">
+        <header class="system-toolbar">
+            <div class="toolbar-brand-title">LiveSort</div>
+            <div class="toolbar-actions">
+                <a id="back-link" href="./index.html" class="sans-text text-xs tracking-widest uppercase">
+                    <svg class="close-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" d="M6 6l12 12M18 6 6 18"></path></svg>
+                    <span class="back-link-label">&larr; <span class="lang-en">Back to App</span><span class="lang-zh">返回应用</span></span>
+                </a>
+                <button id="lang-toggle" class="sans-text text-xs tracking-widest uppercase">
+                    EN / 中文
+                </button>
+                <button id="theme-toggle" class="sans-text text-xs tracking-widest uppercase">
+                    <span class="dark-text">DARK</span><span class="light-text hidden">LIGHT</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="hairline mb-16"></div>
+
+        <!-- Content -->
+        <main id="algorithm-main" class="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-24">
+            <!-- Left: Sidebar / Index -->
+            <div id="algorithm-toc" class="md:col-span-3">
+                <div class="toc-panel">
+                    <h3 class="eyebrow mb-4">
+                        <span class="lang-en">Contents</span>
+                        <span class="lang-zh">目录</span>
+                    </h3>
+                    <ul class="toc-list sans-text text-sm space-y-3">
+                        <li><a href="#philosophy"><span class="lang-en">Design Philosophy</span><span class="lang-zh">设计哲学</span></a></li>
+                        <li><a href="#interest-curve"><span class="lang-en">The Interest Curve</span><span class="lang-zh">优秀兴趣曲线</span></a></li>
+                        <li><a href="#audio-features"><span class="lang-en">Audio Features</span><span class="lang-zh">音频特征提取</span></a></li>
+                        <li><a href="#sorting"><span class="lang-en">Sorting Algorithm</span><span class="lang-zh">排序算法</span></a></li>
+                        <li><a href="#auto-mix"><span class="lang-en">Seamless</span><span class="lang-zh">无感过渡</span></a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Right: Main Article -->
+            <div id="algorithm-article" class="md:col-span-9 page-panel">
+                <div class="eyebrow">
+                    <span class="lang-en">Documentation</span><span class="lang-zh">文档</span>
+                </div>
+                <h1 class="article-title mt-3">
+                    <span class="lang-en">The Art of Arrangement</span>
+                    <span class="lang-zh">编排的艺术</span>
+                </h1>
+                <p class="article-intro">
+                    <span class="lang-en">A unified explanation of how LiveSort shapes pacing, emotion and smooth transitions.</span>
+                    <span class="lang-zh">统一展示 LiveSort 如何组织节奏、情绪与平滑过渡。</span>
+                </p>
+
+                <section id="philosophy" class="article-section">
+                    <h2><span class="lang-en">Design Philosophy</span><span class="lang-zh">设计哲学</span></h2>
+                    <div class="lang-zh-block">
+                        <p>LiveSort 的诞生源于一个简单的想法：如何让杂乱无章的日常歌单，带来如同亲临演唱会现场般的沉浸体验？</p>
+                        <p>一场优秀的演唱会，其歌单绝不是随机播放的。它讲究“一收一发”，用抓耳但渐进的歌曲开场，在中间穿插节奏与抒情，避免观众因持续的高潮而情绪疲劳，也不会因为一直抒情而感到沉闷，最终以温暖的歌曲完美收尾。LiveSort 试图通过音频特征分析与算法编排，在本地重现这种情绪的起伏。</p>
+                    </div>
+                    <div class="lang-en-block">
+                        <p>LiveSort was born from a simple idea: how can we transform a chaotic everyday playlist into an immersive experience that feels like a live concert?</p>
+                        <p>A great concert setlist is never random. It relies on tension and release—starting with a catchy but progressive opening, alternating between rhythmic and lyrical tracks in the middle to prevent emotional fatigue, and concluding with a warm, resolving finale. LiveSort uses audio feature extraction and algorithmic arrangement to recreate this emotional journey locally.</p>
+                    </div>
+                </section>
+
+                <section id="interest-curve" class="article-section">
+                    <h2><span class="lang-en">The Interest Curve</span><span class="lang-zh">优秀兴趣曲线</span></h2>
+                    <div class="lang-zh-block">
+                        <p>万物皆有递归性。一首单曲的情绪设计（Hook开头 &rarr; 主歌铺垫 &rarr; 副歌小高潮 &rarr; 间奏过渡 &rarr; 最终高潮 &rarr; 收尾）同样适用于整场演唱会的宏观编排。</p>
+                        <p>我们引入了著名的<strong>“优秀兴趣曲线 (The Interest Curve)”</strong>。在游戏设计和叙事学中，这条曲线被认为是最能抓住受众注意力的节奏模式。应用在歌单中，它的关键节点包括：</p>
+                        <ul class="list-disc pl-6 mb-6 font-sans text-sm space-y-2">
+                            <li><strong>Hook (引子)</strong>：开场立刻抓住注意力。</li>
+                            <li><strong>Valley (谷底)</strong>：情绪回落，为后续积蓄能量。</li>
+                            <li><strong>Rising Peaks (波峰与波谷)</strong>：交替上升的节奏，每次高潮都比上一次更强烈。</li>
+                            <li><strong>Climax (高潮)</strong>：全场情绪的最高点。</li>
+                            <li><strong>Outro (收尾)</strong>：迅速而温暖地结束，留下余韵。</li>
+                        </ul>
+                    </div>
+                    <div class="lang-en-block">
+                        <p>Everything is recursive. The emotional design of a single track (Hook &rarr; Verse build-up &rarr; Chorus &rarr; Bridge &rarr; Final Climax &rarr; Outro) applies equally to the macro-arrangement of a full concert.</p>
+                        <p>We introduced the famous <strong>"Interest Curve"</strong>. Widely used in game design and narratology, this curve represents the optimal rhythm to maintain audience engagement. Translated to a playlist, its key nodes are:</p>
+                        <ul class="list-disc pl-6 mb-6 font-sans text-sm space-y-2">
+                            <li><strong>Hook</strong>: Grabs attention immediately at the start.</li>
+                            <li><strong>Valley</strong>: A drop in intensity to build potential energy.</li>
+                            <li><strong>Rising Peaks</strong>: Alternating highs and lows, with each peak stronger than the last.</li>
+                            <li><strong>Climax</strong>: The absolute emotional peak of the setlist.</li>
+                            <li><strong>Outro</strong>: A swift, warm resolution that leaves a lasting impression.</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Curve Visualization -->
+                    <div class="visual-shell">
+                        <canvas id="curveChart" height="100"></canvas>
+                    </div>
+                </section>
+
+                <section id="audio-features" class="article-section">
+                    <h2><span class="lang-en">Audio Features Extraction</span><span class="lang-zh">音频特征提取</span></h2>
+                    <div class="lang-zh-block">
+                        <p>为了将歌曲匹配到兴趣曲线上，LiveSort 采用浏览器端分析链路：通过 <code>Web Audio API</code> 在本地解码并提取音频特征。我们不仅提取整首歌曲的平均特征，还专门提取<strong>首尾15秒</strong>的特征，以确保歌曲之间的平滑过渡。</p>
+                        <p>当前版本不依赖 Python 后端。网易云 <code>.ncm</code> 文件会在浏览器内本地解密并转换为可分析音频后，进入同一特征提取流程，无需手动转码。</p>
+                        <ul class="list-disc pl-6 mb-6 font-sans text-sm space-y-2">
+                            <li><strong>BPM (节拍率)</strong>：决定歌曲的物理速度。</li>
+                            <li><strong>Energy (RMS能量)</strong>：衡量歌曲的响度和饱满度。</li>
+                            <li><strong>Brightness (频谱质心)</strong>：反映声音的明亮程度（低沉还是高亢）。</li>
+                        </ul>
+                    </div>
+                    <div class="lang-en-block">
+                        <p>To map songs to the interest curve, LiveSort now uses a browser-side pipeline: audio is decoded locally through the <code>Web Audio API</code>, then features are extracted in the same runtime. We analyze both whole-track averages and the <strong>first/last 15 seconds</strong> for smoother transitions.</p>
+                        <p>The current version does not require a Python backend. NetEase <code>.ncm</code> files are decrypted and converted locally in the browser, then sent through the same feature-extraction flow.</p>
+                        <ul class="list-disc pl-6 mb-6 font-sans text-sm space-y-2">
+                            <li><strong>BPM (Tempo)</strong>: Determines the physical speed of the song.</li>
+                            <li><strong>Energy (RMS)</strong>: Measures the loudness and fullness of the track.</li>
+                            <li><strong>Brightness (Spectral Centroid)</strong>: Reflects how bright or dark the sound is.</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section id="sorting" class="article-section">
+                    <h2><span class="lang-en">Sorting Algorithm</span><span class="lang-zh">排序算法</span></h2>
+                    <div class="lang-zh-block">
+                        <p>LiveSort 的核心是一个贪心优化算法。对于播放列表中的每一个位置，算法会计算剩余所有候选歌曲的“代价函数 (Cost Function)”，并选择代价最小的歌曲填入该位置。</p>
+                        <p>代价函数综合考虑了三个权重因素：</p>
+                        <ol class="list-decimal pl-6 mb-6 font-sans text-sm space-y-2">
+                            <li><strong>情绪贴合度 (最高权重)</strong>：候选歌曲的情绪得分与“兴趣曲线”当前位置理想得分的绝对差值。</li>
+                            <li><strong>BPM 衔接度</strong>：上一首歌结尾的 BPM 与候选歌曲开头的 BPM 的比例。完美衔接（1:1）或倍速衔接（1:2，例如 60 BPM 接 120 BPM）会获得极低的惩罚代价。</li>
+                            <li><strong>能量平滑度</strong>：上一首歌结尾的能量与候选歌曲开头的能量差异，避免听感上的突兀。</li>
+                        </ol>
+                    </div>
+                    <div class="lang-en-block">
+                        <p>The core of LiveSort is a greedy optimization algorithm. For each position in the playlist, the algorithm calculates a "Cost Function" for all remaining candidate songs and selects the one with the lowest cost.</p>
+                        <p>The cost function weighs three main factors:</p>
+                        <ol class="list-decimal pl-6 mb-6 font-sans text-sm space-y-2">
+                            <li><strong>Emotion Fit (Highest Weight)</strong>: The absolute difference between the candidate's emotion score and the ideal score on the Interest Curve at that position.</li>
+                            <li><strong>BPM Transition</strong>: The ratio between the previous song's ending BPM and the candidate's starting BPM. Perfect matches (1:1) or double/half-time matches (e.g., 60 BPM to 120 BPM) receive very low penalty costs.</li>
+                            <li><strong>Energy Smoothness</strong>: The difference in energy between the end of the previous song and the start of the next, preventing jarring auditory jumps.</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section id="auto-mix" class="article-section">
+                    <h2><span class="lang-en">Seamless</span><span class="lang-zh">无感过渡</span></h2>
+                    <div class="lang-zh-block">
+                        <p>无感过渡的目标很简单：让两首歌的交接更自然，不突兀。系统会在前一首快结束时，提前把下一首轻柔接入，整个过渡大约 10 秒左右。</p>
+                        <ol class="list-decimal pl-6 mb-6 font-sans text-sm space-y-2">
+                            <li><strong>自动找时机</strong>：系统会判断前一首尾段状态，选择更合适的切入点，不会生硬“硬切”。</li>
+                            <li><strong>音量自动平衡</strong>：自动控制两首歌的重叠音量，避免突然变大声或听起来太吵。</li>
+                            <li><strong>效果平滑过渡</strong>：EQ 和混响是渐进变化，不会一瞬间把音色改得很夸张。</li>
+                            <li><strong>保留下一首开头细节</strong>：尽量让下一首的前奏清晰可听，不被前一首尾声盖住。</li>
+                        </ol>
+                        <p>你可以把它理解为一个“更聪明的淡入淡出”：该提前就提前，该轻一点就轻一点，目标就是让整段听感连贯、舒服。</p>
+                    </div>
+                    <div class="lang-en-block">
+                        <p>Seamless has one simple goal: make song handoffs feel smooth. LiveSort brings in the next track a little before the current one ends, with a transition of around 10 seconds.</p>
+                        <ol class="list-decimal pl-6 mb-6 font-sans text-sm space-y-2">
+                            <li><strong>Smart timing</strong>: it chooses a better moment to blend, instead of forcing a hard cut.</li>
+                            <li><strong>Automatic volume balance</strong>: overlap loudness is controlled to avoid sudden spikes.</li>
+                            <li><strong>Smooth effect changes</strong>: EQ and reverb shift gradually, not abruptly.</li>
+                            <li><strong>Clear next intro</strong>: it tries to keep the next song’s opening details audible.</li>
+                        </ol>
+                        <p>Think of it as a smarter fade in/out: start earlier when needed, stay gentle when needed, and keep the listening experience natural.</p>
+                    </div>
+                    <div class="visual-shell">
+                        <canvas id="transitionChart" height="110"></canvas>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Language Toggle
+        const langToggle = document.getElementById('lang-toggle');
+        langToggle.addEventListener('click', () => {
+            document.body.classList.toggle('zh-mode');
+            localStorage.setItem('lang', document.body.classList.contains('zh-mode') ? 'zh' : 'en');
+            renderChart();
+            renderTransitionChart();
+        });
+        
+        if (localStorage.getItem('lang') === 'en') {
+            document.body.classList.remove('zh-mode');
+        }
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        const backLink = document.getElementById('back-link');
+        const tocLinks = document.querySelectorAll('#algorithm-toc a[href^="#"]');
+        const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === '1';
+        document.body.dataset.embedded = isEmbedded ? '1' : '0';
+        document.body.classList.toggle('embedded', isEmbedded);
+        
+        function applyAlgorithmTheme(isDark, options = { rerender: true, persist: true, notifyParent: false }) {
+            html.classList.toggle('dark', isDark);
+            if (options.persist) {
+                localStorage.theme = isDark ? 'dark' : 'light';
+            }
+            if (options.rerender) {
+                renderChart();
+                renderTransitionChart();
+            }
+            if (options.notifyParent && isEmbedded && window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'algorithm-theme-changed', theme: isDark ? 'dark' : 'light' }, window.location.origin);
+            }
+        }
+        
+        function navigateWithTransition(url) {
+            if (document.startViewTransition) {
+                document.startViewTransition(() => {
+                    window.location.href = url;
+                });
+                return;
+            }
+            window.location.href = url;
+        }
+
+        if (backLink) {
+            backLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (isEmbedded && window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'close-algorithm-panel' }, window.location.origin);
+                    return;
+                }
+                navigateWithTransition(backLink.href);
+            });
+        }
+
+        if (isEmbedded) {
+            themeToggle.classList.add('hidden');
+        } else {
+            themeToggle.classList.remove('hidden');
+            themeToggle.addEventListener('click', () => {
+                applyAlgorithmTheme(!html.classList.contains('dark'), { rerender: true, persist: true, notifyParent: true });
+            });
+        }
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            applyAlgorithmTheme(true, { rerender: false, persist: false, notifyParent: false });
+        } else {
+            applyAlgorithmTheme(false, { rerender: false, persist: false, notifyParent: false });
+        }
+
+        if (isEmbedded) {
+            window.addEventListener('message', (e) => {
+                if (e.origin !== window.location.origin) return;
+                if (!e.data) return;
+                if (e.data.type === 'parent-theme-sync') {
+                    applyAlgorithmTheme(e.data.theme === 'dark', { rerender: true, persist: true, notifyParent: false });
+                }
+                if (e.data.type === 'parent-lang-sync') {
+                    if (e.data.lang === 'zh') {
+                        document.body.classList.add('zh-mode');
+                        localStorage.setItem('lang', 'zh');
+                    } else {
+                        document.body.classList.remove('zh-mode');
+                        localStorage.setItem('lang', 'en');
+                    }
+                    renderChart();
+                    renderTransitionChart();
+                }
+            });
+        }
+
+        tocLinks.forEach((link) => {
+            link.addEventListener('click', (e) => {
+                const href = link.getAttribute('href');
+                if (!href || !href.startsWith('#')) return;
+                const target = document.querySelector(href);
+                if (!target) return;
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', href);
+                } else {
+                    window.location.hash = href;
+                }
+            });
+        });
+
+        let curveChart = null;
+        let transitionChart = null;
+        
+        function getChartLang() {
+            const isZh = document.body.classList.contains('zh-mode');
+            return {
+                isZh,
+                curveDataset: isZh ? '兴趣/情绪曲线' : 'Interest / Emotion',
+                curveXAxis: isZh ? '时间线 (%)' : 'Timeline (%)',
+                curveYAxis: isZh ? '强度' : 'Intensity',
+                start: isZh ? '起点' : 'Start',
+                hookPeak: isZh ? 'Hook 峰值' : 'Hook Peak',
+                valley: isZh ? '谷底' : 'Valley',
+                climax: isZh ? '高潮' : 'Climax',
+                outro: isZh ? '收尾' : 'Outro',
+                phase: isZh ? '阶段' : 'Phase',
+                transitionXAxis: isZh ? '过渡时间线 (秒)' : 'Transition Timeline (s)',
+                transitionYAxis: isZh ? '相对电平' : 'Relative Level',
+                outgoingLabel: isZh ? '上一首音量' : 'Outgoing Volume',
+                incomingLabel: isZh ? '下一首音量（动态）' : 'Incoming Volume (Dynamic)',
+                toneLabel: isZh ? '下潜深度' : 'Underwater Depth',
+                reverbLabel: isZh ? '混响湿度' : 'Reverb Wetness'
+            };
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('curveChart').getContext('2d');
+            const isDark = html.classList.contains('dark');
+            const lang = getChartLang();
+            const gridColor = isDark ? '#333333' : '#d1d1d1';
+            const lineColor = isDark ? '#ffffff' : '#000000';
+            const bgColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+
+            // Interest Curve Data (Hook -> Valley -> Rising Peaks -> Climax -> Outro)
+            const timeline = [0, 15, 22, 32, 40, 55, 65, 80, 100];
+            const emotions = [10, 60, 25, 45, 35, 75, 40, 100, 5];
+
+            if (curveChart) curveChart.destroy();
+
+            Chart.defaults.font.family = "'Google Sans', 'Google Sans Text', 'Product Sans', 'Inter', sans-serif";
+            curveChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timeline,
+                    datasets: [{
+                        label: lang.curveDataset,
+                        data: emotions,
+                        borderColor: lineColor,
+                        backgroundColor: bgColor,
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: lineColor,
+                        pointBorderColor: lineColor,
+                        pointRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            grid: { color: gridColor },
+                            title: { display: true, text: lang.curveXAxis, color: lineColor }
+                        },
+                        y: {
+                            grid: { color: gridColor },
+                            title: { display: true, text: lang.curveYAxis, color: lineColor },
+                            min: 0,
+                            max: 110
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: isDark ? 'rgba(17, 17, 17, 0.95)' : 'rgba(249, 249, 248, 0.95)',
+                            titleColor: isDark ? '#f9f9f8' : '#111111',
+                            bodyColor: isDark ? '#f9f9f8' : '#111111',
+                            borderColor: isDark ? '#333333' : '#d1d1d1',
+                            borderWidth: 1,
+                            cornerRadius: 0,
+                            padding: { x: 10, y: 8 },
+                            callbacks: {
+                                title: (items) => {
+                                    const val = items[0].parsed.x;
+                                    if(val === 0) return lang.start;
+                                    if(val === 15) return lang.hookPeak;
+                                    if(val === 22) return lang.valley;
+                                    if(val === 80) return lang.climax;
+                                    if(val === 100) return lang.outro;
+                                    return `${lang.phase} ${val}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTransitionChart() {
+            const ctx = document.getElementById('transitionChart').getContext('2d');
+            const isDark = html.classList.contains('dark');
+            const lang = getChartLang();
+            const gridColor = isDark ? '#333333' : '#d1d1d1';
+            const outColor = isDark ? '#f9f9f8' : '#111111';
+            const inColor = isDark ? '#9ca3af' : '#6b7280';
+            const toneColor = isDark ? '#93c5fd' : '#1d4ed8';
+            const reverbColor = isDark ? '#fca5a5' : '#b91c1c';
+
+            const timelineSec = Array.from({ length: 19 }, (_, i) => Number((i * 0.6).toFixed(1)));
+            const totalSec = 10.8;
+            const outgoing = timelineSec.map(t => {
+                const ratio = Math.min(1, t / totalSec);
+                const fadeOutCore = Math.cos(ratio * 0.5 * Math.PI);
+                const fadeOutDuck = 1 - (0.14 * ratio) - (0.12 * Math.pow(ratio, 2.2));
+                return Math.max(0, fadeOutCore * Math.max(0, fadeOutDuck) * 100);
+            });
+            const incoming = timelineSec.map(t => {
+                const ratio = Math.min(1, t / totalSec);
+                const breathRatio = 0.16;
+                const inRatio = ratio <= breathRatio ? 0 : (ratio - breathRatio) / (1 - breathRatio);
+                const startGain = 0.82;
+                return (startGain + (1 - startGain) * Math.pow(inRatio, 0.9)) * 100;
+            });
+            const underwater = timelineSec.map(t => {
+                const ratio = Math.min(1, t / totalSec);
+                const breathRatio = 0.16;
+                const inRatio = ratio <= breathRatio ? 0 : (ratio - breathRatio) / (1 - breathRatio);
+                const entryEnhance = Math.min(1, Math.max(0, ratio / 0.3));
+                const releaseStartSec = 6;
+                const releaseEndSec = 8.4;
+                const releaseRatio = t <= releaseStartSec ? 0 : Math.min(1, (t - releaseStartSec) / (releaseEndSec - releaseStartSec));
+                const effectMinMultiplier = 0;
+                const smoothRelease = releaseRatio * releaseRatio * (3 - 2 * releaseRatio);
+                const softTailRelease = 1 - Math.pow(1 - releaseRatio, 2.6);
+                const releaseCurve = smoothRelease * 0.45 + softTailRelease * 0.55;
+                const effectMultiplier = 1 - (1 - effectMinMultiplier) * releaseCurve;
+                const entryBlendRatio = Math.min(1, ratio / 0.3);
+                const entryPeakRatio = 1 - (entryBlendRatio * entryBlendRatio * (3 - 2 * entryBlendRatio));
+                const outgoingDepthRaw = Math.min(1, 0.28 + Math.pow(ratio, 1.16));
+                const incomingDepthLinear = Math.max(0.12, 0.84 - 0.68 * inRatio);
+                const incomingDepthCurve = Math.max(0.12, 0.84 - 0.72 * Math.pow(inRatio, 0.68));
+                const incomingDepthRaw = incomingDepthLinear * 0.42 + incomingDepthCurve * 0.58;
+                const entryDepthCurve = Math.pow(entryPeakRatio, 1.28);
+                const outgoingDepthShaped = outgoingDepthRaw * 0.82 + (0.74 * entryDepthCurve) * 0.18;
+                const incomingDepthShaped = incomingDepthRaw * 0.84 + (0.76 * entryDepthCurve) * 0.16;
+                const outgoingDepthTarget = Math.min(1, outgoingDepthShaped * effectMultiplier);
+                const incomingDepthTarget = Math.min(1, incomingDepthShaped * effectMultiplier);
+                const outgoingDepth = outgoingDepthTarget * entryEnhance;
+                const incomingDepth = incomingDepthTarget * entryEnhance;
+                const outgoingScaled = outgoingDepth * 0.78;
+                const incomingScaled = incomingDepth * 0.72;
+                const dominantDepth = Math.max(outgoingScaled, incomingScaled);
+                const companionDepth = Math.min(outgoingScaled, incomingScaled);
+                return (dominantDepth * 0.82 + companionDepth * 0.18) * 100;
+            });
+            const reverb = timelineSec.map(t => {
+                const ratio = Math.min(1, t / totalSec);
+                const breathRatio = 0.16;
+                const inRatio = ratio <= breathRatio ? 0 : (ratio - breathRatio) / (1 - breathRatio);
+                const entryEnhance = Math.min(1, Math.max(0, ratio / 0.3));
+                const releaseStartSec = 6;
+                const releaseEndSec = 8.4;
+                const releaseRatio = t <= releaseStartSec ? 0 : Math.min(1, (t - releaseStartSec) / (releaseEndSec - releaseStartSec));
+                const effectMinMultiplier = 0;
+                const smoothRelease = releaseRatio * releaseRatio * (3 - 2 * releaseRatio);
+                const softTailRelease = 1 - Math.pow(1 - releaseRatio, 2.6);
+                const releaseCurve = smoothRelease * 0.45 + softTailRelease * 0.55;
+                const effectMultiplier = 1 - (1 - effectMinMultiplier) * releaseCurve;
+                const entryBlendRatio = Math.min(1, ratio / 0.3);
+                const entryPeakRatio = 1 - (entryBlendRatio * entryBlendRatio * (3 - 2 * entryBlendRatio));
+                const outgoingWetTarget = Math.min(0.36, Math.max(0.1 + Math.pow(ratio, 1.2) * 0.26, 0.36 * entryPeakRatio) * effectMultiplier);
+                const incomingWetTarget = Math.min(0.36, Math.max(Math.max(0.1, 0.3 - inRatio * 0.17), 0.36 * entryPeakRatio) * effectMultiplier);
+                const outgoingWet = outgoingWetTarget * entryEnhance;
+                const incomingWet = incomingWetTarget * entryEnhance;
+                return Math.max(outgoingWet, incomingWet) * 100;
+            });
+
+            if (transitionChart) transitionChart.destroy();
+
+            transitionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timelineSec,
+                    datasets: [
+                        {
+                            label: lang.outgoingLabel,
+                            data: outgoing,
+                            borderColor: outColor,
+                            borderWidth: 2,
+                            tension: 0.35,
+                            pointRadius: 0
+                        },
+                        {
+                            label: lang.incomingLabel,
+                            data: incoming,
+                            borderColor: inColor,
+                            borderWidth: 2,
+                            tension: 0.35,
+                            pointRadius: 0
+                        },
+                        {
+                            label: lang.toneLabel,
+                            data: underwater,
+                            borderColor: toneColor,
+                            borderWidth: 1.5,
+                            borderDash: [6, 4],
+                            tension: 0.35,
+                            pointRadius: 0
+                        },
+                        {
+                            label: lang.reverbLabel,
+                            data: reverb,
+                            borderColor: reverbColor,
+                            borderWidth: 1.2,
+                            borderDash: [2, 5],
+                            tension: 0.35,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            grid: { color: gridColor },
+                            title: { display: true, text: lang.transitionXAxis, color: outColor }
+                        },
+                        y: {
+                            min: 0,
+                            max: 105,
+                            grid: { color: gridColor },
+                            title: { display: true, text: lang.transitionYAxis, color: outColor }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, labels: { color: outColor, boxWidth: 18, usePointStyle: false } },
+                        tooltip: {
+                            backgroundColor: isDark ? 'rgba(17, 17, 17, 0.95)' : 'rgba(249, 249, 248, 0.95)',
+                            titleColor: isDark ? '#f9f9f8' : '#111111',
+                            bodyColor: isDark ? '#f9f9f8' : '#111111',
+                            borderColor: isDark ? '#333333' : '#d1d1d1',
+                            borderWidth: 1,
+                            cornerRadius: 0,
+                            padding: { x: 10, y: 8 }
+                        }
+                    }
+                }
+            });
+        }
+
+        window.onload = () => {
+            renderChart();
+            renderTransitionChart();
+        };
+    </script>
+</body>
+</html>

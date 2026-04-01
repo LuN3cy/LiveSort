@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" fill="none">
+<rect x="24" y="24" width="912" height="312" rx="24" fill="#fafaf9"/>
+<rect x="24" y="24" width="912" height="312" rx="24" stroke="#e7e5e4" stroke-width="2"/>
+<rect x="102" y="92" width="786" height="198" rx="18" fill="#ffffff"/>
+<path d="M148 114H860M148 157H860M148 200H860M148 243H860M148 286H860" stroke="#d1d1d1" stroke-width="1.4"/>
+<path d="M148 286V102" stroke="#d1d1d1" stroke-width="1.8"/>
+<path d="M148 286H860" stroke="#d1d1d1" stroke-width="1.8"/>
+<path d="M148 94L187.56 96.26L227.11 100.03L266.67 105.27L306.22 111.92L345.78 119.89L385.33 129.13L424.89 139.47L464.44 150.8L504 162.99L543.56 175.87L583.11 189.3L622.67 203.14L662.22 217.18L701.78 231.29L741.33 245.31L780.89 259.01L820.44 272.29L860 277" fill="none" stroke="#111111" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M148 136.56L187.56 136.56L227.11 136.56L266.67 136.12L306.22 133.26L345.78 130.71L385.33 128.27L424.89 125.91L464.44 123.62L504 121.33L543.56 119.1L583.11 116.91L622.67 114.76L662.22 112.62L701.78 110.5L741.33 108.4L780.89 106.32L820.44 104.25L860 102.15" fill="none" stroke="#6b7280" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M148 286L187.56 268.11L227.11 251.49L266.67 237.28L306.22 227.97L345.78 218.73L385.33 216.98L424.89 216L464.44 211.37L504 206.59L543.56 201.68L583.11 230.08L622.67 258.58L662.22 280.2L701.78 286L741.33 286L780.89 286L820.44 286L860 286" fill="none" stroke="#1d4ed8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 6"/>
+<path d="M148 286L187.56 274.34L227.11 264.65L266.67 254.13L306.22 245.1L345.78 236.89L385.33 235.12L424.89 237.27L464.44 239.44L504 241.59L543.56 242.12L583.11 255.98L622.67 270.21L662.22 281.49L701.78 286L741.33 286L780.89 286L820.44 286L860 286" fill="none" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 6"/>
+<text x="106" y="64" fill="#111111" font-size="18" font-family="Google Sans, Arial, sans-serif">相对电平</text>
+<text x="700" y="328" fill="#111111" font-size="18" font-family="Google Sans, Arial, sans-serif">过渡时间线 (秒)</text>
+<text x="119" y="292" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">0</text>
+<text x="113" y="249" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">25</text>
+<text x="113" y="206" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">50</text>
+<text x="113" y="163" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">75</text>
+<text x="106" y="120" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">100</text>
+<text x="144" y="306" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">0</text>
+<text x="261" y="306" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">1.8</text>
+<text x="379" y="306" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">3.6</text>
+<text x="498" y="306" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">5.4</text>
+<text x="616" y="306" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">7.2</text>
+<text x="735" y="306" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">9.0</text>
+<text x="848" y="306" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">10.8</text>
+<rect x="222" y="38" width="128" height="26" rx="8" fill="#ffffff" stroke="#e7e5e4"/>
+<line x1="236" y1="51" x2="266" y2="51" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
+<text x="274" y="55" fill="#111111" font-size="13" font-family="Google Sans, Arial, sans-serif">上一首音量</text>
+<rect x="362" y="38" width="170" height="26" rx="8" fill="#ffffff" stroke="#e7e5e4"/>
+<line x1="376" y1="51" x2="406" y2="51" stroke="#6b7280" stroke-width="3" stroke-linecap="round"/>
+<text x="414" y="55" fill="#111111" font-size="13" font-family="Google Sans, Arial, sans-serif">下一首音量（动态）</text>
+<rect x="544" y="38" width="122" height="26" rx="8" fill="#ffffff" stroke="#e7e5e4"/>
+<line x1="558" y1="51" x2="588" y2="51" stroke="#1d4ed8" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="8 6"/>
+<text x="596" y="55" fill="#111111" font-size="13" font-family="Google Sans, Arial, sans-serif">下潜深度</text>
+<rect x="678" y="38" width="114" height="26" rx="8" fill="#ffffff" stroke="#e7e5e4"/>
+<line x1="692" y1="51" x2="722" y2="51" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 6"/>
+<text x="730" y="55" fill="#111111" font-size="13" font-family="Google Sans, Arial, sans-serif">混响湿度</text>
+</svg>

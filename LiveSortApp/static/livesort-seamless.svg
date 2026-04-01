@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+<defs>
+<linearGradient id="livesort-stroke" x1="31" y1="33" x2="97" y2="95" gradientUnits="userSpaceOnUse">
+<stop stop-color="#fbbf24"/>
+<stop offset="0.58" stop-color="#f97316"/>
+<stop offset="1" stop-color="#ea580c"/>
+</linearGradient>
+<linearGradient id="livesort-fill" x1="40" y1="45" x2="88" y2="83" gradientUnits="userSpaceOnUse">
+<stop stop-color="#fed7aa" stop-opacity="0.78"/>
+<stop offset="1" stop-color="#fdba74" stop-opacity="0.42"/>
+</linearGradient>
+</defs>
+<path d="M 64 88.25 A 22.25 22.25 0 1 1 64 43.75 C 64 43.75, 64 43.75, 64 43.75 A 22.25 22.25 0 1 1 64 88.25 C 64 88.25, 64 88.25, 64 88.25 Z" fill="url(#livesort-fill)" stroke="url(#livesort-stroke)" stroke-width="6.5" stroke-linejoin="round"/>
+</svg>

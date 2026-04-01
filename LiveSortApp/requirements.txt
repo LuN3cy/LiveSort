@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+librosa
+soundfile
+pydantic
+jinja2
+python-multipart
+matplotlib
+numpy
+scipy
+numba
+mutagen

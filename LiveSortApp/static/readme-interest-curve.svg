@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" fill="none">
+<rect x="24" y="24" width="912" height="372" rx="24" fill="#fafaf9"/>
+<rect x="24" y="24" width="912" height="372" rx="24" stroke="#e7e5e4" stroke-width="2"/>
+<rect x="104" y="54" width="784" height="284" rx="18" fill="#ffffff"/>
+<path d="M148 98H860M148 153H860M148 208H860M148 263H860M148 318H860" stroke="#d1d1d1" stroke-width="1.6"/>
+<path d="M148 318V78" stroke="#d1d1d1" stroke-width="1.8"/>
+<path d="M148 318H860" stroke="#d1d1d1" stroke-width="1.8"/>
+<path d="M148 294C165 270 218 184 254.8 184C286 184 287 255 304.64 261C324 267 354 220 375.84 217C396 214 413 235 432.8 239C463 245 504 157 539.6 151C572 145 585 220 610.8 228C646 239 674 109 717.6 96C757 84 823 272 860 305" fill="none" stroke="#111111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M148 318L148 294C165 270 218 184 254.8 184C286 184 287 255 304.64 261C324 267 354 220 375.84 217C396 214 413 235 432.8 239C463 245 504 157 539.6 151C572 145 585 220 610.8 228C646 239 674 109 717.6 96C757 84 823 272 860 305L860 318Z" fill="rgba(0,0,0,0.05)"/>
+<circle cx="148" cy="294" r="5.5" fill="#111111"/>
+<circle cx="254.8" cy="184" r="5.5" fill="#111111"/>
+<circle cx="304.64" cy="261" r="5.5" fill="#111111"/>
+<circle cx="375.84" cy="217" r="5.5" fill="#111111"/>
+<circle cx="432.8" cy="239" r="5.5" fill="#111111"/>
+<circle cx="539.6" cy="151" r="5.5" fill="#111111"/>
+<circle cx="610.8" cy="228" r="5.5" fill="#111111"/>
+<circle cx="717.6" cy="96" r="5.5" fill="#111111"/>
+<circle cx="860" cy="305" r="5.5" fill="#111111"/>
+<text x="106" y="90" fill="#111111" font-size="18" font-family="Google Sans, Arial, sans-serif">强度</text>
+<text x="728" y="382" fill="#111111" font-size="18" font-family="Google Sans, Arial, sans-serif">时间线 (%)</text>
+<text x="119" y="324" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">0</text>
+<text x="108" y="269" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">25</text>
+<text x="108" y="214" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">50</text>
+<text x="108" y="159" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">75</text>
+<text x="101" y="104" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">100</text>
+<text x="144" y="356" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">0</text>
+<text x="244" y="356" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">15</text>
+<text x="294" y="356" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">22</text>
+<text x="364" y="356" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">32</text>
+<text x="423" y="356" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">40</text>
+<text x="530" y="356" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">55</text>
+<text x="601" y="356" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">65</text>
+<text x="709" y="356" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">80</text>
+<text x="850" y="356" fill="#78716c" font-size="14" font-family="Google Sans, Arial, sans-serif">100</text>
+<rect x="684" y="62" width="164" height="32" rx="10" fill="#ffffff" stroke="#e7e5e4"/>
+<line x1="700" y1="78" x2="734" y2="78" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
+<text x="744" y="83" fill="#111111" font-size="14" font-family="Google Sans, Arial, sans-serif">兴趣 / 情绪曲线</text>
+</svg>

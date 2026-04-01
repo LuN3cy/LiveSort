@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  .leg {
+    position: relative;
+    width: 20px;
+    height: 48px;
+    border-radius: 50%;
+    background: #eee;
+    margin: 50px;
+  }
+  .left {
+    border-left: 2.5px solid black;
+  }
+  .right {
+    border-right: 2.5px solid black;
+  }
+  .foot {
+    position: absolute;
+    width: 16px;
+    height: 6px;
+    background: red;
+    bottom: -2px;
+  }
+</style>
+</head>
+<body>
+  <div class="leg left">
+    <div class="foot" style="left: 1px; margin-left: -8px;"></div>
+  </div>
+  <div class="leg right">
+    <div class="foot" style="right: 1px; margin-right: -8px;"></div>
+  </div>
+</body>
+</html>
