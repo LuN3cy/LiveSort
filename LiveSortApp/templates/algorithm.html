@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>LiveSort | 算法说明</title>
     <!-- Tailwind CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
@@ -65,6 +65,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             min-height: 100vh;
+            min-height: 100dvh;
         }
 
         html.dark body {
@@ -366,24 +367,152 @@
 
         @media (max-width: 768px) {
             .system-toolbar {
-                padding: 1rem;
-                border-radius: 1.6rem;
+                padding: 0.95rem;
+                border-radius: 1.35rem;
             }
 
             .toolbar-actions {
                 width: 100%;
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 0.55rem;
             }
 
             .toolbar-actions > * {
-                flex: 1 1 calc(33.333% - 0.5rem);
+                min-width: 0;
                 text-align: center;
                 justify-content: center;
+            }
+
+            .toolbar-brand-title {
+                font-size: 1.7rem;
             }
 
             .page-panel,
             .toc-panel,
             .article-section {
                 padding: 1.15rem;
+            }
+
+            #algorithm-main {
+                gap: 1rem;
+            }
+
+            .page-panel,
+            .toc-panel {
+                border-radius: 1.35rem;
+            }
+
+            .page-panel {
+                min-height: auto;
+            }
+
+            .article-title {
+                font-size: 2rem;
+                line-height: 1;
+            }
+
+            .article-intro {
+                margin-bottom: 1.35rem;
+            }
+
+            .toc-panel {
+                position: static;
+            }
+
+            .toc-list {
+                display: flex;
+                gap: 0.6rem;
+                overflow-x: auto;
+                padding-bottom: 0.15rem;
+                scroll-snap-type: x proximity;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .toc-list li {
+                flex: 0 0 auto;
+            }
+
+            .toc-list a {
+                white-space: nowrap;
+                scroll-snap-align: start;
+            }
+
+            .visual-shell {
+                padding: 0.85rem;
+                border-radius: 1.2rem;
+            }
+
+            .visual-shell canvas {
+                width: 100% !important;
+                height: auto !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding:
+                    max(0.85rem, env(safe-area-inset-top, 0px))
+                    max(0.75rem, env(safe-area-inset-right, 0px))
+                    max(1rem, env(safe-area-inset-bottom, 0px))
+                    max(0.75rem, env(safe-area-inset-left, 0px));
+            }
+
+            body.embedded #algorithm-shell {
+                padding:
+                    max(0.9rem, env(safe-area-inset-top, 0px))
+                    max(0.75rem, env(safe-area-inset-right, 0px))
+                    max(1.1rem, env(safe-area-inset-bottom, 0px))
+                    max(0.75rem, env(safe-area-inset-left, 0px));
+            }
+
+            .system-toolbar {
+                gap: 0.8rem;
+            }
+
+            .toolbar-brand-title {
+                width: 100%;
+                font-size: 1.45rem;
+            }
+
+            .toolbar-actions {
+                grid-template-columns: 1fr;
+            }
+
+            #back-link,
+            #lang-toggle,
+            #theme-toggle {
+                min-height: 2.9rem;
+            }
+
+            .article-section {
+                border-radius: 1.2rem;
+                padding: 1rem;
+            }
+
+            .article-section h2 {
+                font-size: 1.25rem;
+            }
+
+            p,
+            .article-section li {
+                font-size: 0.94rem;
+                line-height: 1.66;
+            }
+
+            body.embedded #algorithm-toc {
+                position: static;
+                width: 100%;
+            }
+
+            body.embedded #algorithm-article {
+                margin-left: 0;
+            }
+
+            body.embedded #algorithm-toc > div {
+                max-height: none;
+                overflow: visible;
+                padding-right: 0;
             }
         }
     </style>

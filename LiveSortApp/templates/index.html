@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>LiveSort | 歌曲无感过渡与自动排序</title>
     <!-- Tailwind CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
@@ -78,8 +78,9 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
-            padding-bottom: 104px;
+            padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
             min-height: 100vh;
+            min-height: 100dvh;
         }
 
         html.dark body {
@@ -962,9 +963,9 @@
         /* Player bar wrapper */
         #player-bar-wrapper {
             position: fixed;
-            bottom: 24px;
+            bottom: calc(16px + env(safe-area-inset-bottom, 0px));
             left: 50%;
-            width: min(90vw, 1000px);
+            width: min(calc(100vw - 1.25rem), 1000px);
             z-index: 50;
             transform: translate(-50%, calc(100% + 36px));
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1165,6 +1166,20 @@
             box-shadow: none;
             gap: 1rem;
             font-family: var(--font-sans);
+        }
+
+        .player-automix,
+        .player-title-slot,
+        .player-progress,
+        .player-controls,
+        .player-volume {
+            min-width: 0;
+        }
+
+        .player-title-slot {
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #player-bar button,
@@ -2014,20 +2029,38 @@
         @media (max-width: 768px) {
             .system-toolbar {
                 gap: 0.85rem;
-                padding: 1rem;
-                border-radius: 1.6rem;
+                padding: 0.95rem;
+                border-radius: 1.35rem;
+            }
+            .toolbar-brand {
+                width: 100%;
+            }
+            .toolbar-brand::before,
+            .toolbar-brand::after {
+                display: none;
+            }
+            .toolbar-brand-title {
+                font-size: 1.3rem;
             }
             .toolbar-actions {
                 width: 100%;
                 margin-left: 0;
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 0.55rem;
             }
             .toolbar-actions > * {
-                flex: 1 1 calc(33.333% - 0.5rem);
+                min-width: 0;
                 justify-content: center;
             }
             .toolbar-popover-wrap {
-                flex: 1 1 calc(33.333% - 0.5rem);
+                min-width: 0;
                 justify-content: center;
+            }
+            #algorithm-link {
+                grid-column: span 2;
+                padding-inline: 0.85rem;
+                font-size: 0.68rem;
             }
             .toolbar-contact-card {
                 right: 50%;
@@ -2038,32 +2071,173 @@
                 transform: translate(50%, 0) scale(1);
             }
             .stats-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 0.6rem;
+            }
+            .workspace-panel,
+            #left-panel section,
+            #playlist-panel {
+                padding: 1rem;
+                border-radius: 1.25rem;
+            }
+            .main-workspace {
+                gap: 1.25rem;
+            }
+            .panel-heading {
+                margin-bottom: 1rem;
+            }
+            .panel-title {
+                font-size: 1.25rem;
+            }
+            .custom-file-upload,
+            .btn-editorial {
+                min-height: 3.1rem;
+            }
+            .playlist-title {
+                font-size: 1.6rem;
+                line-height: 1;
+            }
+            #playlist-panel > .flex.items-end.justify-between {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.9rem;
+                margin-bottom: 1rem;
+            }
+            #playlist-panel > .flex.items-end.justify-between > button {
+                width: 100%;
+                justify-content: center;
+            }
+            #emotion-chart-shell {
+                height: 13rem;
+                padding: 0.85rem;
+            }
+            #player-bar-wrapper {
+                width: calc(100vw - 0.75rem);
+                bottom: calc(8px + env(safe-area-inset-bottom, 0px));
             }
             #player-bar {
-                width: 92vw;
-                left: 50%;
-                bottom: 10px;
                 flex-direction: column;
-                gap: 1rem;
-                padding: 1rem;
+                align-items: stretch;
+                gap: 0.85rem;
+                padding: 0.9rem 0.95rem;
             }
-            .player-controls { width: 100%; justify-content: space-between; }
+            .player-automix {
+                width: 100%;
+                max-width: none;
+                justify-content: center;
+            }
+            .player-title-slot {
+                max-width: none;
+                margin: 0;
+            }
+            #now-playing-title {
+                font-size: 0.95rem;
+            }
+            .player-progress {
+                width: 100%;
+                min-width: 0;
+            }
+            .player-controls {
+                width: 100%;
+                justify-content: space-between;
+                margin: 0;
+            }
+            .player-volume {
+                width: 100%;
+                justify-content: space-between;
+                margin: 0;
+            }
+            .player-volume input[type=range] {
+                width: min(54vw, 220px);
+            }
             .track-row-main {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 0.7rem;
+                gap: 0.75rem;
+            }
+            .track-left-stack {
+                width: 100%;
+                gap: 0.75rem;
+                align-items: flex-start;
             }
             .track-right-metrics {
                 width: 100%;
-                justify-content: space-between;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+                gap: 0.55rem;
+                align-items: stretch;
             }
             .track-metric {
                 align-items: flex-start;
             }
             .track-title {
-                font-size: 1.04rem;
+                font-size: 1.02rem;
+                white-space: normal !important;
+                overflow: hidden;
+                text-overflow: initial;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                line-height: 1.28;
+            }
+            .delete-track-btn {
+                width: 2.25rem;
+                height: 2.25rem;
+                min-height: 2.25rem;
+                transform: none;
+                border-radius: 999px;
+                background: rgba(249, 115, 22, 0.1);
+                color: var(--orange-accent-strong);
+            }
+            .delete-track-btn:hover,
+            .delete-track-btn:active {
+                transform: none;
+            }
+            .empty-state {
+                min-height: 14rem;
+                padding: 1.5rem 0.75rem;
+            }
+            .empty-state-copy {
+                max-width: 100%;
+            }
+            .algorithm-content {
+                width: calc(100vw - 0.75rem);
+                height: calc(100dvh - 0.75rem - env(safe-area-inset-bottom, 0px));
+                border-radius: 1.25rem;
+            }
+            #export-panel {
+                width: calc(100vw - 0.75rem);
+                max-height: calc(100dvh - 0.75rem - env(safe-area-inset-bottom, 0px));
+                padding: 1rem;
+                border-radius: 1.25rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .toolbar-actions {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            #algorithm-link {
+                grid-column: span 3;
+            }
+            .custom-file-upload + .custom-file-upload {
+                margin-top: 0.65rem;
+            }
+            .workspace-panel .flex.gap-3.w-full {
+                flex-direction: column;
+            }
+            .track-left-stack > .flex.items-center.gap-3.shrink-0 {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .track-left-stack .w-10.h-10 {
+                width: 2.4rem;
+                height: 2.4rem;
             }
         }
         #playlist-scroll {
@@ -2758,7 +2932,7 @@
         </div>
         <div id="player-bar">
             <!-- Left: Smart Transition -->
-            <button id="automix-btn" class="sans-text text-sm whitespace-nowrap transition-colors flex-shrink-0 max-w-[132px] md:max-w-[156px] overflow-hidden" onclick="toggleAutoMix()">
+            <button id="automix-btn" class="player-automix sans-text text-sm whitespace-nowrap transition-colors flex-shrink-0 max-w-[132px] md:max-w-[156px] overflow-hidden" onclick="toggleAutoMix()">
                 <div class="automix-icon-container">
                     <svg width="36" height="18" viewBox="0 0 36 18" aria-hidden="true" style="overflow: visible;">
                         <defs>
@@ -2794,12 +2968,12 @@
             </button>
             
             <!-- Title -->
-            <div class="truncate max-w-[120px] md:max-w-[200px] flex-shrink-0 mx-4">
+            <div class="player-title-slot truncate max-w-[120px] md:max-w-[200px] flex-shrink-0 mx-4">
                 <div id="now-playing-title" class="text-lg italic truncate text-center">No Track Selected</div>
             </div>
             
             <!-- Progress -->
-            <div class="flex-1 flex items-center gap-3 sans-text text-xs text-gray-500 min-w-[150px]">
+            <div class="player-progress flex-1 flex items-center gap-3 sans-text text-xs text-gray-500 min-w-[150px]">
                 <span id="time-current">0:00</span>
                 <div class="relative flex-1 h-[4px] bg-gray-200 dark:bg-gray-800 rounded-full cursor-pointer overflow-hidden" onclick="seekTrack(event)" id="progress-container">
                     <div id="progress-transition-incoming" class="absolute top-0 left-0 h-full pointer-events-none rounded-full" style="width:0%; opacity:0; background: rgba(249, 115, 22, 0.92); box-shadow: 0 0 8px rgba(249, 115, 22, 0.32); transition: width 180ms ease, opacity 220ms ease;"></div>
@@ -2810,7 +2984,7 @@
             </div>
             
             <!-- Controls -->
-            <div class="flex items-center gap-4 flex-shrink-0 ml-4">
+            <div class="player-controls flex items-center gap-4 flex-shrink-0 ml-4">
                 <!-- Previous Button -->
                 <button id="prev-btn" class="w-6 h-6 flex items-center justify-center hover:opacity-50 transition-opacity" onclick="playPrevTrack()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 20L9 12l10-8v16z"/><path d="M5 19h2V5H5v14z"/></svg>
@@ -2829,7 +3003,7 @@
             </div>
             
             <!-- Volume -->
-            <div class="flex items-center gap-2 sans-text text-xs tracking-widest flex-shrink-0 ml-6">
+            <div class="player-volume flex items-center gap-2 sans-text text-xs tracking-widest flex-shrink-0 ml-6">
                 <span class="lang-en">Vol</span><span class="lang-zh">音量</span>
                 <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8" oninput="changeVolume()" class="w-20 accent-black dark:accent-white h-1 bg-gray-200 dark:bg-gray-800 rounded-full appearance-none outline-none">
             </div>
@@ -5453,10 +5627,14 @@
 
         function updatePlayerSafeArea() {
             const hasActivePlayer = playerBar && playerBar.classList.contains('active');
-            document.body.style.paddingBottom = hasActivePlayer ? '198px' : '104px';
+            document.body.style.paddingBottom = hasActivePlayer
+                ? 'calc(198px + env(safe-area-inset-bottom, 0px))'
+                : 'calc(104px + env(safe-area-inset-bottom, 0px))';
             const playlistPanel = document.getElementById('playlist-panel');
             if (playlistPanel) {
-                playlistPanel.style.paddingBottom = hasActivePlayer ? '132px' : '0';
+                playlistPanel.style.paddingBottom = hasActivePlayer
+                    ? 'calc(132px + env(safe-area-inset-bottom, 0px))'
+                    : '0';
             }
         }
 
