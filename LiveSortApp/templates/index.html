@@ -3761,6 +3761,25 @@
             return new OfflineCtx(channelCount, frameCount, sampleRate);
         }
 
+        function configureMasterLimiter(limiterNode) {
+            if (!limiterNode) return;
+            limiterNode.threshold.value = -2.4;
+            limiterNode.knee.value = 0;
+            limiterNode.ratio.value = 20;
+            limiterNode.attack.value = 0.003;
+            limiterNode.release.value = 0.12;
+        }
+
+        function createMasterBus(context, destinationNode) {
+            const inputGain = context.createGain();
+            inputGain.gain.value = 0.94;
+            const limiter = context.createDynamicsCompressor();
+            configureMasterLimiter(limiter);
+            inputGain.connect(limiter);
+            limiter.connect(destinationNode || context.destination);
+            return { inputGain, limiter };
+        }
+
         function createSongReferenceElement(song) {
             return { dataset: { filename: String(song?.filename || '') } };
         }
@@ -4035,6 +4054,7 @@
             const frameCount = Math.max(1, Math.ceil(totalDurationSec * sampleRate) + 1);
             syncRealExportProgress(28, 'rendering_local');
             const offlineCtx = createOfflineRenderContext(2, frameCount, sampleRate);
+            const offlineMasterBus = createMasterBus(offlineCtx, offlineCtx.destination);
             const impulse = buildImpulseResponse(offlineCtx, 2.2, 2.0);
             const graphPlans = plans.map((plan) => {
                 const source = offlineCtx.createBufferSource();
@@ -4065,7 +4085,7 @@
                 lowPass.connect(convolver);
                 convolver.connect(wetGain);
                 wetGain.connect(gainNode);
-                gainNode.connect(offlineCtx.destination);
+                gainNode.connect(offlineMasterBus.inputGain);
                 resetScheduledTrackState({ gainNode, lowShelf, highShelf, lowPass, dryGain, wetGain }, plan.startTime, baseVol);
                 source.start(plan.startTime);
                 return {
@@ -4446,6 +4466,7 @@
 
         let currentTrackElement = null;
         let audioCtx = null;
+        let realtimeMasterBus = null;
         const audioNodes = new Map();
         let fadeProgress = 0;
         let crossfadeSession = null;
@@ -5764,12 +5785,13 @@
             }
         });
 
-        audio1.volume = getPerceptualVolumeFromSlider();
-        audio2.volume = getPerceptualVolumeFromSlider();
+        audio1.volume = 1;
+        audio2.volume = 1;
 
         function ensureAudioGraph() {
             if (audioCtx || !(window.AudioContext || window.webkitAudioContext)) return;
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            realtimeMasterBus = createMasterBus(audioCtx, audioCtx.destination);
             const impulse = buildImpulseResponse(audioCtx, 2.2, 2.0);
             [audio1, audio2].forEach(audio => {
                 const source = audioCtx.createMediaElementSource(audio);
@@ -5784,7 +5806,7 @@
                 const lowPass = audioCtx.createBiquadFilter();
                 lowPass.type = 'lowpass';
                 lowPass.frequency.value = 18000;
-                lowPass.Q.value = 0.7;
+                lowPass.Q.value = 0.65;
                 const convolver = audioCtx.createConvolver();
                 convolver.buffer = impulse;
                 const dryGain = audioCtx.createGain();
@@ -5801,8 +5823,9 @@
                 lowPass.connect(convolver);
                 convolver.connect(wetGain);
                 wetGain.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                audioNodes.set(audio, { lowShelf, highShelf, lowPass, dryGain, wetGain });
+                gainNode.connect(realtimeMasterBus.inputGain);
+                audio.volume = 1;
+                audioNodes.set(audio, { lowShelf, highShelf, lowPass, dryGain, wetGain, gainNode });
             });
         }
 
@@ -5827,6 +5850,23 @@
             if (audioCtx && audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
+        }
+
+        function setTrackOutputLevel(audio, level, immediate = true) {
+            const safeLevel = Math.min(1, Math.max(0, Number(level) || 0));
+            const node = audioNodes.get(audio);
+            if (audioCtx && node && node.gainNode) {
+                const now = audioCtx.currentTime;
+                node.gainNode.gain.cancelScheduledValues(now);
+                if (immediate) {
+                    node.gainNode.gain.setValueAtTime(safeLevel, now);
+                } else {
+                    node.gainNode.gain.setTargetAtTime(safeLevel, now, 0.04);
+                }
+                audio.volume = 1;
+                return;
+            }
+            audio.volume = safeLevel;
         }
 
         function setTone(audio, depth) {
@@ -6116,8 +6156,8 @@
             const baseVol = getPerceptualVolumeFromSlider();
             const initialEffectMultiplier = getCrossfadeEffectMultiplier(0);
             const initialCrossfadeState = getCrossfadeState(0, baseVol, breathRatio, dynamicProfile, initialEffectMultiplier);
-            incomingAudio.volume = initialCrossfadeState.incomingVolume;
-            outgoingAudio.volume = initialCrossfadeState.outgoingVolume;
+            setTrackOutputLevel(incomingAudio, initialCrossfadeState.incomingVolume);
+            setTrackOutputLevel(outgoingAudio, initialCrossfadeState.outgoingVolume);
             setTone(outgoingAudio, initialCrossfadeState.outgoingDepth);
             setTone(incomingAudio, initialCrossfadeState.incomingDepth);
             setReverb(outgoingAudio, initialCrossfadeState.outgoingReverb);
@@ -6155,8 +6195,8 @@
                 const effectMultiplier = getCrossfadeEffectMultiplier(incomingAudio.currentTime);
                 const crossfadeState = getCrossfadeState(ratio, baseVol, breathRatio, dynamicProfile, effectMultiplier);
 
-                outgoingAudio.volume = crossfadeState.outgoingVolume;
-                incomingAudio.volume = crossfadeState.incomingVolume;
+                setTrackOutputLevel(outgoingAudio, crossfadeState.outgoingVolume);
+                setTrackOutputLevel(incomingAudio, crossfadeState.incomingVolume);
                 setTone(outgoingAudio, crossfadeState.outgoingDepth);
                 setTone(incomingAudio, crossfadeState.incomingDepth);
                 setReverb(outgoingAudio, crossfadeState.outgoingReverb);
@@ -6174,8 +6214,8 @@
             const { outgoingAudio, incomingAudio } = crossfadeSession;
             outgoingAudio.pause();
             outgoingAudio.currentTime = 0;
-            outgoingAudio.volume = 0;
-            incomingAudio.volume = getPerceptualVolumeFromSlider();
+            setTrackOutputLevel(outgoingAudio, 0);
+            setTrackOutputLevel(incomingAudio, getPerceptualVolumeFromSlider());
             setTone(outgoingAudio, 0);
             setTone(incomingAudio, 0);
             setReverb(outgoingAudio, 0);
@@ -6190,15 +6230,15 @@
             if (isCrossfading && crossfadeSession) {
                 const effectMultiplier = getCrossfadeEffectMultiplier(crossfadeSession.incomingAudio.currentTime);
                 const crossfadeState = getCrossfadeState(fadeProgress, baseVol, crossfadeSession.breathRatio, crossfadeSession.dynamicProfile, effectMultiplier);
-                crossfadeSession.outgoingAudio.volume = crossfadeState.outgoingVolume;
-                crossfadeSession.incomingAudio.volume = crossfadeState.incomingVolume;
+                setTrackOutputLevel(crossfadeSession.outgoingAudio, crossfadeState.outgoingVolume);
+                setTrackOutputLevel(crossfadeSession.incomingAudio, crossfadeState.incomingVolume);
                 setTone(crossfadeSession.outgoingAudio, crossfadeState.outgoingDepth);
                 setTone(crossfadeSession.incomingAudio, crossfadeState.incomingDepth);
                 setReverb(crossfadeSession.outgoingAudio, crossfadeState.outgoingReverb);
                 setReverb(crossfadeSession.incomingAudio, crossfadeState.incomingReverb);
             } else {
-                activeAudio.volume = baseVol;
-                nextAudio.volume = 0;
+                setTrackOutputLevel(activeAudio, baseVol);
+                setTrackOutputLevel(nextAudio, 0);
             }
         }
 
@@ -6279,9 +6319,10 @@
 
             nowPlayingTitle.textContent = title;
             activeAudio.src = resolveSongAudioSrc(filename);
-            activeAudio.volume = getPerceptualVolumeFromSlider();
             updateTransitionRegionHints();
             resumeAudioContext();
+            setTrackOutputLevel(activeAudio, getPerceptualVolumeFromSlider());
+            setTrackOutputLevel(nextAudio, 0);
             activeAudio.play()
                 .then(() => updatePlayPauseUI(true))
                 .catch(() => updatePlayPauseUI(false));
