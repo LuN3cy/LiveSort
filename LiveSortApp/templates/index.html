@@ -3206,10 +3206,52 @@
         }
 
         function syncExportSelectUi() {
+            const format = document.getElementById('export-format').value;
+            const isWav = format === 'wav';
+            const isZh = document.body.classList.contains('zh-mode');
+
             document.querySelectorAll('.export-select-wrap').forEach(wrap => {
                 const select = wrap.querySelector('.export-select');
                 const triggerLabel = wrap.querySelector('.export-select-trigger-label');
                 if (!select || !triggerLabel) return;
+
+                // Update option labels if it's the quality selector
+                if (wrap.dataset.exportSelect === 'export-quality') {
+                    const options = select.querySelectorAll('option');
+                    const optionBtns = wrap.querySelectorAll('.export-select-option');
+                    
+                    let labels;
+                    if (isWav) {
+                        labels = isZh ? {
+                            '320': '高音质 (32000Hz)',
+                            '192': '标准音质 (24000Hz)',
+                            '128': '低音质 (16000Hz)'
+                        } : {
+                            '320': 'High (32000Hz)',
+                            '192': 'Medium (24000Hz)',
+                            '128': 'Low (16000Hz)'
+                        };
+                    } else {
+                        labels = isZh ? {
+                            '320': '高音质 (320kbps)',
+                            '192': '标准音质 (192kbps)',
+                            '128': '低音质 (128kbps)'
+                        } : {
+                            '320': 'High (320kbps)',
+                            '192': 'Medium (192kbps)',
+                            '128': 'Low (128kbps)'
+                        };
+                    }
+
+                    options.forEach(opt => {
+                        if (labels[opt.value]) opt.textContent = labels[opt.value];
+                    });
+                    optionBtns.forEach(btn => {
+                        const val = btn.dataset.value;
+                        if (labels[val]) btn.textContent = labels[val];
+                    });
+                }
+
                 const currentOption = Array.from(select.options).find(option => option.value === select.value) || select.options[0];
                 if (!currentOption) return;
                 triggerLabel.textContent = currentOption.textContent;
