@@ -1375,7 +1375,14 @@ def _run_export_render(
     temp_dir: str,
     progress_callback=None,
 ) -> tuple[str, str]:
-    sample_rate = 44100
+    if export_format == "wav":
+        sample_rate = {
+            "high": 32000,
+            "medium": 24000,
+            "low": 16000,
+        }.get(quality, 32000)
+    else:
+        sample_rate = 44100
     if progress_callback is not None:
         progress_callback(0.02, "preparing", "正在准备导出资源")
     merged = _mix_tracks(file_paths, automix, sample_rate=sample_rate, progress_callback=progress_callback)
