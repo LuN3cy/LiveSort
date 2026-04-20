@@ -960,6 +960,38 @@
             filter: saturate(1.02);
         }
 
+        /* Auto-sort toggle button */
+        .btn-autosort-toggle {
+            background: var(--soft-surface-strong);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            border-radius: 0.75rem;
+            transition: all 0.22s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        .btn-autosort-toggle.active {
+            background: var(--orange-accent-soft);
+            color: var(--orange-accent-strong);
+            border-color: var(--orange-accent-soft);
+        }
+        .btn-autosort-toggle .toggle-icon {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.3;
+            transition: all 0.22s ease;
+        }
+        .btn-autosort-toggle.active .toggle-icon {
+            opacity: 1;
+            box-shadow: 0 0 6px currentColor;
+        }
+
         /* Player bar wrapper */
         #player-bar-wrapper {
             position: fixed;
@@ -2780,7 +2812,15 @@
                     </div>
                 </div>
 
-                <button class="btn-editorial w-full sans-text text-sm uppercase tracking-widest" onclick="startAnalysis()">
+                <div class="mb-4">
+                    <button id="autosort-toggle-btn" type="button" class="btn-autosort-toggle w-full active" onclick="toggleAutoSort()">
+                        <div class="toggle-icon"></div>
+                        <span class="lang-en text-[10px] uppercase tracking-wider autosort-status-en">Auto-Sort: ON</span>
+                        <span class="lang-zh text-[10px] uppercase tracking-wider autosort-status-zh">自动排序: 开启</span>
+                    </button>
+                </div>
+
+                <button class="btn-editorial w-full sans-text text-sm uppercase tracking-widest" onclick="startAnalysis(true)">
                     <span class="lang-en">Initiate Analysis</span>
                     <span class="lang-zh">开始分析</span>
                 </button>
@@ -4439,6 +4479,7 @@
         let activeAudio = audio1;
         let nextAudio = audio2;
         let isAutoMix = true;
+        let isAutoSort = true;
         let isCrossfading = false;
         let fadeTimer = null;
         const CROSSFADE_SEC = 10;
@@ -5491,6 +5532,68 @@
             });
         }
 
+        function calculateTransitionCost(prevSong, currentSong) {
+            if (!prevSong) return 0;
+            const prevEndBpm = Number(prevSong.end_bpm ?? prevSong.bpm ?? 120);
+            const prevEndEnergy = Number(prevSong.end_energy ?? prevSong.energy ?? 0.5);
+            const candStartBpm = Number(currentSong.start_bpm ?? currentSong.bpm ?? 120);
+            const candStartEnergy = Number(currentSong.start_energy ?? currentSong.energy ?? 0.5);
+            
+            const maxBpm = Math.max(candStartBpm, prevEndBpm);
+            const minBpm = Math.max(Math.min(candStartBpm, prevEndBpm), 1);
+            const bpmRatio = maxBpm / minBpm;
+            const bpmDiff = Math.min(Math.abs(bpmRatio - 1), Math.abs(bpmRatio - 2)) * 100;
+            const energyDiff = Math.abs(candStartEnergy - prevEndEnergy) * 50;
+            return bpmDiff * 1.0 + energyDiff * 0.5;
+        }
+
+        function calculateListTotalCost(list, idealCurve) {
+            let total = 0;
+            for (let i = 0; i < list.length; i++) {
+                const song = list[i];
+                const targetEmotion = Number(idealCurve[i] || 0);
+                const emotionDiff = Math.abs(Number(song.emotion_score || 0) - targetEmotion);
+                total += emotionDiff * 1.5;
+                if (i > 0) {
+                    total += calculateTransitionCost(list[i - 1], song);
+                }
+            }
+            return total;
+        }
+
+        function incrementalSortSongsByFlow(existingSongs, newSongs) {
+            let currentList = [...existingSongs];
+            const toInsert = [...newSongs];
+            const totalCount = existingSongs.length + newSongs.length;
+            const idealCurve = generateIdealCurveLocal(totalCount);
+
+            // Greedily insert each new song into the best position
+            // To be more robust, we could sort newSongs by emotion first, but simple insertion is usually fine
+            for (const song of toInsert) {
+                let bestPos = 0;
+                let minCost = Number.POSITIVE_INFINITY;
+                
+                // Try every possible insertion point
+                for (let i = 0; i <= currentList.length; i++) {
+                    const tempList = [...currentList];
+                    tempList.splice(i, 0, song);
+                    
+                    // We only need to check the cost for a list of this length
+                    // But wait, the ideal curve is for the final length.
+                    // Let's use the first 'tempList.length' points of the final ideal curve as reference
+                    const subIdeal = idealCurve.slice(0, tempList.length);
+                    const cost = calculateListTotalCost(tempList, subIdeal);
+                    
+                    if (cost < minCost) {
+                        minCost = cost;
+                        bestPos = i;
+                    }
+                }
+                currentList.splice(bestPos, 0, song);
+            }
+            return currentList;
+        }
+
         function sortSongsLocallyByFlow(songsWithEmotion) {
             const source = Array.isArray(songsWithEmotion) ? songsWithEmotion.filter(Boolean).map(item => ({ ...item })) : [];
             if (!source.length) {
@@ -6135,6 +6238,22 @@
             const wrapper = document.getElementById('player-bar-wrapper');
             if (wrapper) wrapper.classList.toggle('automix-on', isAutoMix);
             updateTransitionRegionHints();
+        }
+
+        function toggleAutoSort(forceValue) {
+            if (typeof forceValue === 'boolean') {
+                isAutoSort = forceValue;
+            } else {
+                isAutoSort = !isAutoSort;
+            }
+            const btn = document.getElementById('autosort-toggle-btn');
+            if (btn) {
+                btn.classList.toggle('active', isAutoSort);
+                const textEn = btn.querySelector('.autosort-status-en');
+                const textZh = btn.querySelector('.autosort-status-zh');
+                if (textEn) textEn.innerText = isAutoSort ? 'Auto-Sort: ON' : 'Auto-Sort: OFF';
+                if (textZh) textZh.innerText = isAutoSort ? '自动排序: 开启' : '自动排序: 关闭';
+            }
         }
 
         function startCrossfade() {
@@ -6911,6 +7030,7 @@
             if(files.length === 0) return;
             const hasExistingSongs = Array.isArray(window.playlistSongs) && window.playlistSongs.length > 0;
             const effectiveAppendMode = uploadAppendMode && hasExistingSongs;
+            window.numExistingBeforeUpload = effectiveAppendMode ? window.playlistSongs.length : 0;
 
             const status = document.getElementById('upload-status');
             const progressWrap = document.getElementById('upload-progress-wrap');
@@ -7031,7 +7151,7 @@
             }
         }
 
-        async function startAnalysis() {
+        async function startAnalysis(forceSort = false) {
             if (analysisInFlight) return;
             const status = document.getElementById('analysis-status');
             const uploadProgressWrap = document.getElementById('upload-progress-wrap');
@@ -7041,7 +7161,11 @@
             status.classList.remove('hidden');
             analysisInFlight = true;
             startEmptyStateTerminalAnalysis(document.body.classList.contains('zh-mode') ? '正在分析情绪、节奏与排序路径...' : 'Analyzing emotion, rhythm, and sequence path...');
-            startAnalysisLoadingAnimation();
+            
+            // Only show shuffle animation if auto-sort is enabled or forced
+            if (isAutoSort || forceSort) {
+                startAnalysisLoadingAnimation();
+            }
             
             try {
                 const sourceSongs = Array.isArray(window.playlistSongs) ? window.playlistSongs : [];
@@ -7049,7 +7173,7 @@
                     throw new Error(document.body.classList.contains('zh-mode') ? '没有可分析的音频' : 'No audio to analyze');
                 }
                 const analyzedSongs = [];
-                const maxConcurrent = 2;
+                const maxConcurrent = 5;
                 let cursor = 0;
                 let processedCount = 0;
                 const workers = Array.from({ length: Math.min(maxConcurrent, sourceSongs.length) }, async () => {
@@ -7072,17 +7196,42 @@
                 });
                 await Promise.all(workers);
                 const songsWithEmotion = applyEmotionScoresLocal(analyzedSongs.map(item => item || {}));
-                const sortedPack = sortSongsLocallyByFlow(songsWithEmotion);
+                
+                const numExisting = window.numExistingBeforeUpload || 0;
+                window.numExistingBeforeUpload = 0; // Reset after use
+
+                let sortedPack;
+                if (forceSort || numExisting === 0) {
+                    // Global sort for fresh list or forced re-analysis
+                    sortedPack = sortSongsLocallyByFlow(songsWithEmotion);
+                } else {
+                    // Incremental sort: keep existing order, insert new ones
+                    const existing = songsWithEmotion.slice(0, numExisting);
+                    const toInsert = songsWithEmotion.slice(numExisting);
+                    const sorted = incrementalSortSongsByFlow(existing, toInsert);
+                    const actualCurve = sorted.map(getSongCurvePoint);
+                    const idealCurve = generateIdealCurveLocal(sorted.length);
+                    sortedPack = { sorted, actualCurve, idealCurve };
+                }
+
                 status.classList.add('hidden');
                 analysisInFlight = false;
                 stopEmptyStateTerminalAnimation(100);
                 stopAnalysisLoadingAnimation();
                 setEmptyStateTerminalProgress('done', 100, document.body.classList.contains('zh-mode') ? '本地分析完成，正在排序...' : 'Local analysis complete. Sorting...');
                 await restorePlaylistVisualBeforeFinalSort();
-                if (sortedPack.sorted.length > 0) {
-                    await animateSorting(sortedPack.sorted, sortedPack.actualCurve, sortedPack.idealCurve);
+
+                if (isAutoSort || forceSort) {
+                    if (sortedPack.sorted.length > 0) {
+                        await animateSorting(sortedPack.sorted, sortedPack.actualCurve, sortedPack.idealCurve);
+                    } else {
+                        renderUI([], [], [], true);
+                    }
                 } else {
-                    renderUI([], [], [], true);
+                    // Manual mode or Auto-Sort OFF: update data without reordering
+                    // The order in analyzedSongs matches current DOM (new ones at end)
+                    const actualCurve = songsWithEmotion.map(getSongCurvePoint);
+                    renderUI(songsWithEmotion, actualCurve, sortedPack.idealCurve, true);
                 }
             } catch (err) {
                 console.error(err);
@@ -7258,6 +7407,11 @@
                 .map(row => songByFilename.get(row.dataset.filename))
                 .filter(Boolean);
             window.playlistSongs = orderedSongs;
+            
+            // Disable auto-sort when manual adjustment occurs to protect user's manual work
+            if (isAutoSort) {
+                toggleAutoSort(false);
+            }
         }
 
         function updateCurveAfterManualSort() {
