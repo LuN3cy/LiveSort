@@ -3760,35 +3760,66 @@
             return selectedSongs;
         }
 
-        async function createExportSourceFile(song, index = 0) {
-            const filename = String(song?.filename || '');
-            const localEntry = localSongFileMap.get(filename);
+        async function createExportSourceFile(song, index = 0, isZh = false) {
+            const rawFilename = String(song?.filename || '').trim();
+            const fallbackSrc = String(song?.path || song?.url || song?.src || '').trim();
+            const filename = rawFilename || fallbackSrc;
+            const localEntry = rawFilename ? localSongFileMap.get(rawFilename) : null;
             if (localEntry?.file instanceof File) {
-                return new File([localEntry.file], filename || localEntry.file.name || `track_${index + 1}.bin`, {
+                return new File([localEntry.file], rawFilename || localEntry.file.name || `track_${index + 1}.bin`, {
                     type: localEntry.file.type || 'application/octet-stream',
                     lastModified: Number(localEntry.file.lastModified || Date.now())
                 });
             }
-            const response = await fetch(resolveSongAudioSrc(filename));
+            let audioSrc = rawFilename ? resolveSongAudioSrc(rawFilename) : '';
+            if (!audioSrc && fallbackSrc && (/^(blob:|https?:\/\/|\/)/i.test(fallbackSrc))) {
+                audioSrc = fallbackSrc;
+            }
+            if (!audioSrc && filename) {
+                audioSrc = resolveSongAudioSrc(filename);
+            }
+            if (!audioSrc) {
+                const label = filename || `track_${index + 1}`;
+                throw new Error(isZh ? `找不到音频源：${label}` : `Missing source file: ${label}`);
+            }
+            const response = await fetch(audioSrc);
             if (!response.ok) {
-                throw new Error(`Missing source file: ${filename}`);
+                const label = filename || `track_${index + 1}`;
+                throw new Error(isZh ? `找不到音频文件：${label}` : `Missing source file: ${label}`);
+            }
+            const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+            if (contentType.includes('text/html') || contentType.startsWith('text/')) {
+                const label = filename || `track_${index + 1}`;
+                throw new Error(isZh ? `音频源返回了非音频内容：${label}` : `Audio source returned non-audio content: ${label}`);
             }
             const blob = await response.blob();
+            const blobType = String(blob.type || contentType || '').toLowerCase();
+            if (blobType.includes('text/html') || blobType.startsWith('text/')) {
+                const label = filename || `track_${index + 1}`;
+                throw new Error(isZh ? `音频源返回了非音频内容：${label}` : `Audio source returned non-audio content: ${label}`);
+            }
             return new File([blob], filename || `track_${index + 1}.bin`, {
-                type: blob.type || 'application/octet-stream',
+                type: blob.type || contentType || 'application/octet-stream',
                 lastModified: Date.now()
             });
         }
 
-        async function getDecodedExportAudioBuffer(song, index = 0) {
-            const filename = String(song?.filename || '').trim() || `track_${index + 1}`;
+        async function getDecodedExportAudioBuffer(song, index = 0, isZh = false) {
+            const filename = String(song?.filename || '').trim() || String(song?.path || '').trim() || `track_${index + 1}`;
             if (localExportAudioBufferCache.has(filename)) {
                 return localExportAudioBufferCache.get(filename);
             }
-            const sourceFile = await createExportSourceFile(song, index);
+            const sourceFile = await createExportSourceFile(song, index, isZh);
             const arrayBuffer = await sourceFile.arrayBuffer();
             const audioContext = ensureLocalAnalysisAudioContext();
-            const decoded = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+            let decoded;
+            try {
+                decoded = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+            } catch (err) {
+                const baseMessage = err instanceof Error ? err.message : String(err || '');
+                const label = filename || sourceFile?.name || `track_${index + 1}`;
+                throw new Error(isZh ? `无法解码音频：${label}${baseMessage ? `（${baseMessage}）` : ''}` : `Unable to decode audio data: ${label}${baseMessage ? ` (${baseMessage})` : ''}`);
+            }
             localExportAudioBufferCache.set(filename, decoded);
             return decoded;
         }
@@ -3932,17 +3963,30 @@
             const blockAlign = channelCount * bytesPerSample;
             const byteRate = sampleRate * blockAlign;
             const dataSize = frameCount * blockAlign;
-            const buffer = new ArrayBuffer(44 + dataSize);
+            const totalSize = 44 + dataSize;
+            if (!Number.isSafeInteger(totalSize) || totalSize <= 44 || totalSize > 0x7fffffff) {
+                throw new Error('WAV export too large');
+            }
+            let buffer;
+            try {
+                buffer = new ArrayBuffer(totalSize);
+            } catch (_) {
+                throw new Error('WAV export too large');
+            }
             const view = new DataView(buffer);
             const channels = Array.from({ length: channelCount }, (_, index) => {
                 const sourceIndex = Math.min(index, audioBuffer.numberOfChannels - 1);
-                return convertFloat32ToInt16(audioBuffer.getChannelData(sourceIndex));
+                return audioBuffer.getChannelData(sourceIndex);
             });
             let offset = 0;
             const writeString = (value) => {
                 for (let i = 0; i < value.length; i++) {
                     view.setUint8(offset++, value.charCodeAt(i));
                 }
+            };
+            const floatToInt16 = (value) => {
+                const sample = Math.max(-1, Math.min(1, Number(value) || 0));
+                return sample < 0 ? Math.round(sample * 0x8000) : Math.round(sample * 0x7FFF);
             };
             writeString('RIFF');
             view.setUint32(offset, 36 + dataSize, true); offset += 4;
@@ -3959,7 +4003,7 @@
             view.setUint32(offset, dataSize, true); offset += 4;
             for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
                 for (let channelIndex = 0; channelIndex < channelCount; channelIndex++) {
-                    view.setInt16(offset, channels[channelIndex][frameIndex] || 0, true);
+                    view.setInt16(offset, floatToInt16(channels[channelIndex][frameIndex]), true);
                     offset += 2;
                 }
             }
@@ -4010,19 +4054,32 @@
             const settings = getBrowserExportSettings('mp3', quality);
             const channelCount = Math.min(2, Math.max(1, audioBuffer.numberOfChannels || settings.channelCount));
             const encoder = new lame.Mp3Encoder(channelCount, audioBuffer.sampleRate, settings.mp3Kbps);
-            const left = convertFloat32ToInt16(audioBuffer.getChannelData(0));
-            const right = channelCount > 1
-                ? convertFloat32ToInt16(audioBuffer.getChannelData(Math.min(1, audioBuffer.numberOfChannels - 1)))
+            const leftFloat = audioBuffer.getChannelData(0);
+            const rightFloat = channelCount > 1
+                ? audioBuffer.getChannelData(Math.min(1, audioBuffer.numberOfChannels - 1))
                 : null;
+            const floatToInt16 = (value) => {
+                const sample = Math.max(-1, Math.min(1, Number(value) || 0));
+                return sample < 0 ? Math.round(sample * 0x8000) : Math.round(sample * 0x7FFF);
+            };
             const blockSize = 1152;
             const totalBlocks = Math.max(1, Math.ceil(audioBuffer.length / blockSize));
             const chunks = [];
+            const leftBlock = new Int16Array(blockSize);
+            const rightBlock = channelCount > 1 ? new Int16Array(blockSize) : null;
             for (let blockIndex = 0; blockIndex < totalBlocks; blockIndex++) {
                 const start = blockIndex * blockSize;
                 const end = Math.min(audioBuffer.length, start + blockSize);
+                const blockLen = Math.max(0, end - start);
+                for (let i = 0; i < blockLen; i++) {
+                    leftBlock[i] = floatToInt16(leftFloat[start + i]);
+                    if (rightBlock) {
+                        rightBlock[i] = floatToInt16(rightFloat[start + i]);
+                    }
+                }
                 const encodedChunk = channelCount > 1
-                    ? encoder.encodeBuffer(left.subarray(start, end), right.subarray(start, end))
-                    : encoder.encodeBuffer(left.subarray(start, end));
+                    ? encoder.encodeBuffer(leftBlock.subarray(0, blockLen), rightBlock.subarray(0, blockLen))
+                    : encoder.encodeBuffer(leftBlock.subarray(0, blockLen));
                 if (encodedChunk?.length) {
                     chunks.push(new Uint8Array(encodedChunk));
                 }
@@ -4052,7 +4109,7 @@
             const decodedTracks = [];
             for (let i = 0; i < selectedSongs.length; i++) {
                 syncRealExportProgress(2 + (i / selectedSongs.length) * 22, 'decoding_sources');
-                const buffer = await getDecodedExportAudioBuffer(selectedSongs[i], i);
+                const buffer = await getDecodedExportAudioBuffer(selectedSongs[i], i, isZh);
                 decodedTracks.push({
                     song: selectedSongs[i],
                     ref: createSongReferenceElement(selectedSongs[i]),
@@ -4173,7 +4230,15 @@
                 });
             } else {
                 syncRealExportProgress(96, 'writing');
-                downloadBlob = encodeAudioBufferToWavBlob(renderedBuffer, exportSettings);
+                try {
+                    downloadBlob = encodeAudioBufferToWavBlob(renderedBuffer, exportSettings);
+                } catch (err) {
+                    const baseMessage = err instanceof Error ? err.message : String(err || '');
+                    if (isZh) {
+                        throw new Error(baseMessage === 'WAV export too large' ? 'WAV导出体积过大，请减少曲目或改用MP3' : `WAV编码失败${baseMessage ? `（${baseMessage}）` : ''}`);
+                    }
+                    throw new Error(baseMessage === 'WAV export too large' ? 'WAV export too large. Reduce tracks or use MP3.' : `WAV encoding failed${baseMessage ? ` (${baseMessage})` : ''}`);
+                }
             }
             const downloadUrl = URL.createObjectURL(downloadBlob);
             return {
@@ -4566,7 +4631,9 @@
             if (localEntry && localEntry.objectUrl) {
                 return localEntry.objectUrl;
             }
-            return '';
+            const key = String(filename || '').trim();
+            if (!key) return '';
+            return `/music_files/${encodeURIComponent(key)}`;
         }
 
         function resolveSongCoverSrc(song) {
